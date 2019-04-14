@@ -4,10 +4,10 @@
 #####
 
 import cv2
-import numpy as np
-import sys, time
+import time
 from pyzbar import pyzbar
 import hashlib
+import json
 
 # Init some objects
 cap = cv2.VideoCapture(0)
@@ -82,14 +82,15 @@ while True:
     if data == None: break
 
     # If there's a title card start the scan
-    if data.startswith("DataMERGE:"):
+    if data.startswith("DataMERGE"):
         start = 0
 
         # Get the data from the code (total size, order hashes)
-        arr = data.split(":")
-        total = int(arr[1])
-        hashes = arr[2].split(",")
-        print("Found a title card! Total: %d, hashes: %s" % (total, ",".join(hashes)))
+        arr = data.split(".$")
+        hashes = arr[1].split(",")
+        total = len(hashes)
+        meta = json.loads(arr[2])
+        print("Found a title card! Total: %d, hashes: %s, meta: %s" % (total, ",".join(hashes), meta))
         scanned = 0
         ignored = ["", data]
         scanned = []
@@ -126,15 +127,17 @@ while True:
         # Save the result in a file with it's hash to make it unique
         print("Saving the data...")
         result = "".join(ordered)
-        with open("results_%s.txt" % sha1(result.encode("utf-8")), "w") as f:
+        filename = "result_%s.txt"% sha1(result.encode("utf-8"))
+        if 'filename' in meta:
+            filename = meta['filename']
+        with open(filename, "w") as f:
             f.write(result)
             f.close()
 
 
         # The time is when the first data-code was scanned until the file was saved
         end = time.time()
-        print("Finished scanning. Took %.2f seconds" % (end-start))
-        print(result)
+        print("Finished scanning. Took %.2f seconds, saved as %s" % (end-start, filename))
         finishedscan = True
 
 

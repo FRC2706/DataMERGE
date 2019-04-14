@@ -1,12 +1,17 @@
 import qrcode
 import time
-import pygame
 import hashlib
+import argparse
 import sys
+import contextlib
+
+with contextlib.redirect_stdout(None):
+    import pygame
 
 # This splits strings into chunks of a specific length
 def chunkstring(string, length):
     return (string[0+i:length+i] for i in range(0, len(string), length))
+
 
 # This creates a QR code
 def generate_code(data):
@@ -14,6 +19,7 @@ def generate_code(data):
     qr.add_data(data)
     qr.make(fit=True)
     return qr.make_image()
+
 
 # This converts a Python Image Lib image into a Pygame image
 def convert_img(img):
@@ -23,21 +29,30 @@ def convert_img(img):
     data = img.tobytes()
     return pygame.image.fromstring(data, size, mode)
 
+
 # Returns the first 8 characters of the sha1 hash of s
 def sha1(s):
     return hashlib.sha1(s).hexdigest()[:8]
+
+
+# Get the arguments provided (or defaults)
+parser = argparse.ArgumentParser(description="Generate a series of QR codes to transfer a file")
+parser.add_argument("file",          type=str,                help="Path of the file to convert to QR codes",      )
+parser.add_argument("-d", "--delay", type=float, default=0.2, help="Delay between switching QR codes in Pygame"    )
+parser.add_argument("-m", "--meta",  type=str,   default="",  help="Extra information to include in the title card")
+args = vars(parser.parse_args(sys.argv[1:]))
 
 # Init some things
 pygame.init()
 screen = pygame.display.set_mode((970, 970))
 currindex = -1
-length = float(sys.argv[2])
+length = float(args['delay'])
 lastchange = 0
 
 # Load the data from the file
 print("Loading data...")
 data = ""
-with open(sys.argv[1], "r") as f:
+with open(args['file'], "r") as f:
     data = f.read()
 data = list(chunkstring(data, 512))
 
@@ -50,7 +65,11 @@ for chunk in data:
     hashes.append(sha1(chunk.encode("utf-8")))
 
 # Generate the title card
-titlecard = convert_img(generate_code("DataMERGE:%d:%s" % (len(data), ",".join(hashes))))
+if args['meta'].find(".$") != -1:
+    print("Error: meta cannot contain '.$'")
+    sys.exit(1)
+
+titlecard = convert_img(generate_code("DataMERGE.$%s.$%s" % (",".join(hashes), args['meta'])))
 
 
 # This is all pygame stuff for displaying the images

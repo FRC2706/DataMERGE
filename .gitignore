@@ -118,3 +118,4 @@ dmypy.json
 
 # Result files from running the script
 results_*
+result_*
