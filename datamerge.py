@@ -1,5 +1,5 @@
 #####
-# DataMERGE - main.py
+# DataMERGE - datamerge.py
 # Uses Opencv2 to grab images from a webcam
 #####
 
